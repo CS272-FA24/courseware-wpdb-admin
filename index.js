@@ -44,8 +44,8 @@ ${stud.db_name}:
     - "${BASE_PORT + i + 1}:80"
   environment:
     WORDPRESS_DB_HOST: cs272_wp_shared_db
-    WORDPRESS_DB_USER: root
-    WORDPRESS_DB_PASSWORD: ${ROOT}
+    WORDPRESS_DB_USER: ${stud.username}
+    WORDPRESS_DB_PASSWORD: ${stud.password}
     WORDPRESS_DB_NAME: ${stud.db_name}
   working_dir: /var/www/html/${SEMESTER}/${stud.username.toLowerCase()}
   labels:
