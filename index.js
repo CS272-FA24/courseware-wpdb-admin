@@ -1,11 +1,15 @@
 import crypto from 'crypto';
 import fs from 'fs';
 
+const SEMESTER = 'f24';
+const BASE_PORT = 24000;
+
+const ROOT = fs.readFileSync('root.secret').toString().trim();
+const COMPOSE_HEADER = fs.readFileSync("compose.header.template").toString().replaceAll("{ROOT_PASSWORD}", ROOT);
+const COMPOSE_FOOTER = fs.readFileSync("compose.footer.template").toString();
 const TEMPL = fs.readFileSync('gen.md.template').toString();
-
-let GEN = TEMPL;
-
 const SEED = fs.readFileSync('seed.secret').toString().trim();
+
 const STUDENTS = fs.readFileSync('students.secret')
     .toString()
     .trim()
@@ -20,12 +24,36 @@ const STUDENTS_PROCESSED = STUDENTS.map(stud => {
     return { email, username, db_name, password }
 })
 
-console.log(JSON.stringify(STUDENTS_PROCESSED, null, 2))
+let GEN = TEMPL;
 
-GEN = GEN.replace("{MYSQL_STUDENT_DB_CREATION}", STUDENTS_PROCESSED.map(stud => `
+GEN = GEN.replaceAll("{DOCKER_COMPOSE_INITIAL}", COMPOSE_HEADER + "\n" + COMPOSE_FOOTER);
+
+GEN = GEN.replaceAll("{MYSQL_EXEC}", `mysql -uroot -p${ROOT}`);
+
+GEN = GEN.replaceAll("{MYSQL_STUDENT_DB_CREATION}", STUDENTS_PROCESSED.map(stud => `
 CREATE DATABASE \`${stud.db_name}\`;
-CREATE USER '${stud.username}'@'localhost' IDENTIFIED BY '${stud.password}';
-GRANT ALL PRIVILEGES ON \`${stud.db_name}\`.* TO '${stud.username}'@'localhost';
+CREATE USER '${stud.username}'@'%' IDENTIFIED BY '${stud.password}';
+GRANT ALL PRIVILEGES ON \`${stud.db_name}\`.* TO '${stud.username}'@'%';
 `.trim()).join("\n\n"));
 
-fs.writeFileSync("gen.md.secret", GEN)
+GEN = GEN.replaceAll("{DOCKER_COMPOSE_FINAL}", COMPOSE_HEADER + "\n" + STUDENTS_PROCESSED.map((stud, i) => `
+${stud.db_name}:
+  image: wordpress:6.6.1
+  restart: always
+  ports:
+    - "${BASE_PORT + i + 1}:80"
+  environment:
+    WORDPRESS_DB_HOST: cs272_wp_shared_db
+    WORDPRESS_DB_USER: root
+    WORDPRESS_DB_PASSWORD: ${ROOT}
+    WORDPRESS_DB_NAME: ${stud.db_name}
+  working_dir: /var/www/html/${SEMESTER}/${stud.username.toLowerCase()}
+  labels:
+    - "traefik.enable=true"
+    - "traefik.http.routers.${stud.username}_wp.rule=Host(\`cs272-wordpress.cs.wisc.edu\`)&&PathPrefix(\`/${SEMESTER}/${stud.username.toLowerCase()}\`)"
+  depends_on:
+    cs272_wp_shared_db:
+      condition: service_healthy    
+`.trim().split(/\r?\n/g).map(t => `  ${t}`).join("\n")).join("\n") + "\n" + COMPOSE_FOOTER);
+
+fs.writeFileSync("gen.secret.md", GEN)

@@ -13,7 +13,7 @@ This will start up a MySQL Database for which we still need to populate.
 
 ## Populate Database
 
-Next, `docker exec` into the MySQL Database container. Run the following command...
+Next, `docker exec` into the MySQL Database container. Then, in the exec instance, run the following command...
 
 ```
 {MYSQL_EXEC}
@@ -39,4 +39,4 @@ Replace the initial `docker-compose.yml` with the one provided below. This will 
 {DOCKER_COMPOSE_FINAL}
 ```
 
-Great! You are all set. See `gen.csv.secret` to begin a mail merge letting each student know where their WordPress instance lives.
+Great! You are all set.
