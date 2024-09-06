@@ -38,7 +38,7 @@ GRANT ALL PRIVILEGES ON \`${stud.db_name}\`.* TO '${stud.username}'@'%';
 
 GEN = GEN.replaceAll("{DOCKER_COMPOSE_FINAL}", COMPOSE_HEADER + "\n" + STUDENTS_PROCESSED.map((stud, i) => `
 ${stud.db_name}:
-  image: wordpress:6.6.1
+  image: ctnelson1997/cs272-f24-wordpress
   restart: always
   ports:
     - "${BASE_PORT + i + 1}:80"
